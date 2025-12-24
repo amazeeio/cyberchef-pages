@@ -1,0 +1,47 @@
+name: Check latest upstream CyberChef version
+on:
+  schedule:
+  - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - id: version-check
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        current=$(cat version | xargs)
+        latest=$(gh release view --repo gchq/CyberChef --json tagName --jq .tagName)
+        if [ "$current" != "$latest" ]; then
+          echo "$latest" > version
+          echo "updated=true" >> $GITHUB_OUTPUT
+        fi
+    - if: steps.version-check.outputs.updated == 'true'
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        new_version=$(cat version | xargs)
+        branch="update-cyberchef-$new_version"
+
+        # check if a PR for this version alread exists, and bail if so
+        pr_exists=$(gh pr list --head "$branch" --json number --jq '.[0].number')
+        if [ "$pr_exists" ]; then
+          echo "A PR for CyberChef $new_version already exists (#$pr_exists). Not sending another one."
+          exit 0
+        fi
+
+        # otherwise, send a PR for version bump
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout -b "$branch"
+        git commit -am "chore: bump CyberChef to $new_version"
+        git push -f origin "$branch"
+        gh pr create \
+          --title "Update CyberChef to $new_version" \
+          --body "New [upstream release](https://github.com/gchq/CyberChef/releases). Merge this PR to deploy CyberChef $new_version to GitHub Pages."
