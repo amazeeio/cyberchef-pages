@@ -32,6 +32,10 @@ jobs:
         mkdir dist
         unzip cyberchef.zip -d dist
         mv dist/CyberChef_*.html dist/index.html
+    - name: Inject CSP Meta Tag
+      run: |
+        CSP_TAG="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src data:; worker-src blob:;\">"
+        sed -i "s|<head>|<head>${CSP_TAG}|" dist/index.html
     - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
       with:
         path: ./dist
