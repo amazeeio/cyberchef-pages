@@ -25,9 +25,10 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         cc_version="$(cat version | xargs)"
+        cc_sha="$(gh api "repos/gchq/CyberChef/commits/$cc_version" --jq .sha)"
         gh release download "$cc_version" \
           --repo gchq/CyberChef \
-          --pattern "CyberChef_$cc_version.zip" \
+          --pattern "CyberChef_$cc_sha.zip" \
           --output cyberchef.zip
         mkdir dist
         unzip cyberchef.zip -d dist
